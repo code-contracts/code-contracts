@@ -1,0 +1,43 @@
+{
+  "name": "code-contracts",
+  "version": "0.0.0",
+  "description": "Code Contracts Decorators for JavaScript.",
+  "main": "index.js",
+  "scripts": {
+    "clean": "rimraf lib dist docs",
+    "lint": "eslint src",
+    "build": "npm-run-all clean lint build:*",
+    "build:lib": "babel src --out-dir lib --source-maps-inline",
+    "build:dist": "mkdirp dist && browserify lib/index.js --debug --standalone code-contracts > dist/code-contracts.js",
+    "build:dist-min": "mkdirp dist && browserify lib/index.js --standalone code-contracts | uglifyjs - --compress --mangle > dist/code-contracts.min.js",
+    "build:docs": "esdoc -c esdoc.json",
+    "test": "npm run lint && istanbul cover node_modules/mocha/bin/_mocha -- test/*.js --require mocha-babel-hook --colors",
+    "testing": "mocha test/*.js --require mocha-babel-hook --colors --watch --growl"
+  },
+  "devDependencies": {
+    "babel": "^5.4.7",
+    "babel-eslint": "^3.1.9",
+    "babel-plugin-espower": "^1.0.0",
+    "babelify": "^6.1.1",
+    "browserify": "^10.2.1",
+    "esdoc": "^0.1.1",
+    "eslint": "^0.21.2",
+    "istanbul": "^0.3.14",
+    "mkdirp": "^0.5.1",
+    "mocha": "^2.2.5",
+    "npm-run-all": "^1.2.5",
+    "power-assert": "^0.11.0",
+    "rimraf": "^2.3.4",
+    "uglify-js": "^2.4.23"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/code-contracts/code-contracts.git"
+  },
+  "author": "Toru Nagashima",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/code-contracts/code-contracts/issues"
+  },
+  "homepage": "https://github.com/code-contracts/code-contracts#readme"
+}
