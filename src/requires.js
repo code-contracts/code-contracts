@@ -49,73 +49,73 @@ function getParametersMap(f) {
  * Meta-info for condition checker.
  */
 class Meta {
-    /**
-     * @param {function} target - a validation target.
-     */
-    constructor(target) {
-        this.target = target;
-        this.parametersMap = getParametersMap(target);
-        this.preconditions = [];
+  /**
+   * @param {function} target - a validation target.
+   */
+  constructor(target) {
+    this.target = target;
+    this.parametersMap = getParametersMap(target);
+    this.preconditions = [];
+  }
+
+  /**
+   * Add a precondition.
+   * @param {function} condition - A function that means a precondition.
+   */
+  addPrecondition(condition) {
+    const parameters = getParameters(condition);
+    if (parameters.length === 0) {
+      throw new CodeContractError(
+        "condition should have one or more parameters.",
+        this.target,
+        condition);
+    }
+    if (parameters.some(name => name !== "$this" && this.parametersMap[name] == null)) {
+      throw new CodeContractError(
+        "condition's parameters should be `$this` or actual parameter names.",
+        this.target,
+        condition);
     }
 
-    /**
-     * Add a precondition.
-     * @param {function} condition - A function that means a precondition.
-     */
-    addPrecondition(condition) {
-      const parameters = getParameters(condition);
-      if (parameters.length === 0) {
+    this.preconditions.push({condition, parameters});
+  }
+
+  /**
+   * Define a wrapped function for this.target.
+   * @returns {any} a return value of this.target.
+   */
+  defineContractFunction() {
+    const meta = this;
+    return function(...args) {
+      meta.validatePrecondition(this, args);
+      return call(meta.target, this, args);
+    };
+  }
+
+
+  /**
+   * Validate a context object (`$this`) and arguments.
+   * @param {object} $this - A context object.
+   * @param {any[]} args - arguments.
+   * @private
+   */
+  validatePrecondition($this, args) {
+    this.preconditions.forEach(item => {
+      const retv = call(
+        item.condition,
+        $this,
+        item.parameters.map(name =>
+          name === "$this" ? $this : args[this.parametersMap[name]]
+        )
+      );
+      if (!retv) {
         throw new CodeContractError(
-          "condition should have one or more parameters.",
+          "invalid arguments: " + item.parameters.join(", "),
           this.target,
-          condition);
+          item.condition);
       }
-      if (parameters.some(name => name !== "$this" && this.parametersMap[name] == null)) {
-        throw new CodeContractError(
-          "condition's parameters should be `$this` or actual parameter names.",
-          this.target,
-          condition);
-      }
-
-      this.preconditions.push({condition, parameters});
-    }
-
-    /**
-     * Define a wrapped function for this.target.
-     * @returns {any} a return value of this.target.
-     */
-    defineContractFunction() {
-      const meta = this;
-      return function(...args) {
-        meta.validatePrecondition(this, args);
-        return call(meta.target, this, args);
-      };
-    }
-
-
-    /**
-     * Validate a context object (`$this`) and arguments.
-     * @param {object} $this - A context object.
-     * @param {any[]} args - arguments.
-     * @private
-     */
-    validatePrecondition($this, args) {
-      this.preconditions.forEach(item => {
-        const retv = call(
-          item.condition,
-          $this,
-          item.parameters.map(name =>
-            name === "$this" ? $this : args[this.parametersMap[name]]
-          )
-        );
-        if (!retv) {
-          throw new CodeContractError(
-            "invalid arguments: " + item.parameters.join(", "),
-            this.target,
-            item.condition);
-        }
-      });
-    }
+    });
+  }
 }
 
 function setupFunctionRequires(target, condition) {
@@ -150,7 +150,7 @@ export default function requires(condition) {
     throw new TypeError("condition should be a function.");
   }
 
-  return function requires(target, name, descriptor) {
+  return function requiresCondition(target, name, descriptor) {
     if (name === undefined && descriptor === undefined) {
       // Attached to a independent stuff.
       if (isFunction(target)) {
